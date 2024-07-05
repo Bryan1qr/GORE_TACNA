@@ -1,0 +1,96 @@
+---
+title: "Tratamiento de datos de calidad de aire"
+author: "Bryan Quispe"
+date: last-modified
+format: html
+number-sections: true
+code-line-numbers: true
+theme: 
+  light: cosmo
+  dark: darkly
+editor_options: 
+  chunk_output_type: console
+execute: 
+  warning: false
+  message: false
+---
+
+La estación móvil de calidad de aire con la que cuenta el Gobierno Regional de Tacna (en adelante GORE) genera 3 fuentes diferentes de datos en formato csv cuya descarga, procesamiento y análisis implica un trabajo riguroso donde no debe cometerse errores. Es por eso que el presente documento presenta un flujo de trabajo que puede seguirse a fin de que se genere reportes de calidad de aire de una manera más rápida y eficáz.
+
+# Carga de recursos necesarios para el ejemplo:
+
+```{r}
+# Paquetes a utilizar
+library(tidyverse)
+library(openair)
+library(openxlsx)
+library(zoo)
+library(ggthemes)
+
+# Carga de los scripts de simplificación de las rutinas:
+# Carga de script para descargar la data cruda:
+source("scripts/data_cruda.R")
+# Carga de script para procesar los insumos:
+source("Scripts/ECA.R")
+# Carga de script para generar gráficos polares:
+source("Scripts/ECA2.R")
+
+# Carga de ruta de datos de la estación
+meteo <- "inputs/MET JUNIO2024 HUNANUE.csv"
+gases <- "inputs/AIRE JUNIO2024 HUNANUE.csv"
+pm <- "inputs/pm.csv"
+```
+
+# Generación de fuente de datos
+## Datos crudos
+Para esta función creada debe colocarse argumentos similares al ejemplo. En el argumento `tipo` puede escogerse entre **save** para generar un excel con el nombre de estación o escribir **lista** si desea generase un objeto para guardarlo en el ambiente de RStudio.
+
+```{r}
+cruda(meteo = meteo,
+      gases = gases, pm = pm,
+      fecha_inicio = "2024-06-21",
+      fecha_fin = "2024-06-30",
+      estacion = "Unanue_cruda",
+      tipo = "lista") %>% head()
+```
+
+## Datos procesados
+A continuación se muestra el código que se requiere para generar dos tablas de datos. La primera consiste la data horaria de los parámetros de interés correctamente procesados para su comparación con el ECA. y la segunda viene a ser los datos diarios generados a partir de la data horaria procesada. El código genera a las tablas unidas en un objeto de tipo lista que puede ser guardada en un archivo excel colocando el texto **save** en el argumento tipo o guardarlo como un objeto en el ambiente de RStudio colocando el texto **lista** en el argumento tipo.
+
+```{r}
+# mostrando la tabla de datos horaria:
+df <- ECA(meteo = meteo,
+      gases = gases, pm = pm,
+      fecha_inicio = "2024-06-21",
+      fecha_fin = "2024-06-30",
+      estacion = "Unanue",
+      tipo = "lista")[[1]]
+df %>% head()
+
+# mostrando la tabla de datos diaria:
+ECA(meteo = meteo,
+      gases = gases, pm = pm,
+      fecha_inicio = "2024-06-21",
+      fecha_fin = "2024-06-30",
+      estacion = "Unanue",
+      tipo = "lista")[[2]] %>% 
+  head()
+```
+
+# Generación de gráficos polares
+El paquete `openair` nos permite la generación de muchos gráficos útiles para calidad de aire. Uno de ellos **polarPlot** es muy útil para ver el comportamiento espacial de un parámetro. A continuación se muestra el código que permite generar dos grupos de gráficos para reportes.
+
+```{r}
+#| eval: false
+polar(tabla = df,
+      ruta1 = "outputs/g1",
+      ruta2 = "outputs/g2")
+```
+
+El resultado son dós imágenes en png como se ven a continuación:
+
+```{r}
+knitr::include_graphics("outputs/g1.png")
+knitr::include_graphics("outputs/g2.png")
+```
+
